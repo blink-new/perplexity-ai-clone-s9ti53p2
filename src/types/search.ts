@@ -18,5 +18,6 @@ export interface Source {
 export interface SearchHistory {
   id: string
   query: string
+  userId: string
   timestamp: number
 }

@@ -25,40 +25,44 @@ function AppContent() {
     return unsubscribe
   }, [])
 
-  // Load search history
+  const loadSearchHistory = useCallback(async () => {
+    if (!user) return
+    
+    try {
+      // Try to load from localStorage first as fallback
+      const localHistory = localStorage.getItem(`search_history_${user.id}`)
+      if (localHistory) {
+        const parsed = JSON.parse(localHistory)
+        setSearchHistory(parsed.slice(0, 20))
+      }
+    } catch (error) {
+      console.error('Failed to load search history:', error)
+    }
+  }, [user])
+
+  // Load search history when user is available
   useEffect(() => {
     if (user) {
       loadSearchHistory()
     }
   }, [user, loadSearchHistory])
 
-  const loadSearchHistory = useCallback(async () => {
-    if (!user) return
-    try {
-      const history = await blink.db.searchHistory.list({
-        where: { userId: user.id },
-        orderBy: { timestamp: 'desc' },
-        limit: 20
-      })
-      setSearchHistory(history)
-    } catch (error) {
-      console.error('Failed to load search history:', error)
-    }
-  }, [user])
-
   const saveToHistory = async (query: string) => {
     if (!user) return
     
     try {
-      const historyItem = {
+      const historyItem: SearchHistoryType = {
         id: `search_${Date.now()}`,
         query,
         userId: user.id,
         timestamp: Date.now()
       }
       
-      await blink.db.searchHistory.create(historyItem)
-      setSearchHistory(prev => [historyItem, ...prev.slice(0, 19)])
+      // Save to localStorage as fallback
+      const currentHistory = searchHistory
+      const newHistory = [historyItem, ...currentHistory.slice(0, 19)]
+      localStorage.setItem(`search_history_${user.id}`, JSON.stringify(newHistory))
+      setSearchHistory(newHistory)
     } catch (error) {
       console.error('Failed to save search history:', error)
     }
